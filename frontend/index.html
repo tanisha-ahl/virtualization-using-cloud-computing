@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cloud Virtualization Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .logo-area h1 {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .logo-area p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+      font-family: var(--mono);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      font-weight: 600;
+      border: 1px solid;
+      transition: all 0.3s;
+    }
+
+    .status-badge.connected {
+      background: rgba(16,185,129,0.1);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .status-badge.disconnected {
+      background: rgba(239,68,68,0.1);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Config bar */
+    .config-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      align-items: center;
+    }
+
+    .config-bar label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      white-space: nowrap;
+    }
+
+    .config-bar input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.55rem 0.85rem;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .config-bar input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 0.55rem 1.2rem;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Stats row */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent-color, var(--accent));
+    }
+
+    .stat-card .label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--accent-color, var(--accent));
+      line-height: 1;
+    }
+
+    .stat-card .sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    /* Containers section */
+    .section-title {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .containers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .container-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.2s;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .container-card:hover {
+      border-color: rgba(0,212,255,0.3);
+    }
+
+    .container-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: rgba(0,212,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .container-info .name {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    .container-info .id {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .container-status {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+
+    .container-status.running {
+      background: rgba(16,185,129,0.1);
+      color: var(--green);
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+
+    .container-status.stopped {
+      background: rgba(239,68,68,0.1);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+
+    .container-ports {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-align: right;
+    }
+
+    /* API Log */
+    .log-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .log-header span {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .log-body {
+      padding: 0.75rem 1rem;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      line-height: 1.7;
+    }
+
+    .log-entry { display: flex; gap: 0.75rem; }
+    .log-entry .time { color: var(--muted); }
+    .log-entry .method { color: var(--accent); font-weight: 600; }
+    .log-entry .endpoint { color: var(--text); }
+    .log-entry .code-ok { color: var(--green); }
+    .log-entry .code-err { color: var(--red); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: var(--mono);
+    }
+
+    /* Architecture chip row */
+    .arch-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .chip {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface);
+    }
+
+    .chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,212,255,0.05);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .container-card { grid-template-columns: auto 1fr; }
+      .container-ports { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-area">
+      <h1>☁ CLOUD VIRT DASHBOARD</h1>
+      <p>AWS EC2 · Docker · Flask API · VIT Chennai 2026</p>
+    </div>
+    <div id="statusBadge" class="status-badge disconnected">
+      <span class="status-dot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </header>
+
+  <!-- Config Bar -->
+  <div class="config-bar">
+    <label>EC2 IP →</label>
+    <input id="ipInput" type="text" placeholder="e.g. 44.204.24.247" value="localhost"/>
+    <input id="portInput" type="text" placeholder="Port" value="5000" style="max-width:80px"/>
+    <button class="btn btn-primary" id="connectBtn" onclick="connect()">Connect</button>
+    <button class="btn btn-outline" onclick="disconnect()">Reset</button>
+  </div>
+
+  <!-- Architecture chips -->
+  <div class="arch-row">
+    <span class="chip active">AWS EC2 (Ubuntu)</span>
+    <span class="chip active">Docker</span>
+    <span class="chip active">Flask REST API</span>
+    <span class="chip active">Nginx :8081</span>
+    <span class="chip active">HTTPD :8082</span>
+    <span class="chip">IaaS</span>
+    <span class="chip">Free Tier</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--accent-color: var(--accent)">
+      <div class="label">Containers Running</div>
+      <div class="value" id="statContainers">—</div>
+      <div class="sub">Docker instances active</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--green)">
+      <div class="label">API Status</div>
+      <div class="value" id="statApi" style="font-size:1rem;padding-top:0.5rem">OFFLINE</div>
+      <div class="sub">Flask on EC2</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--yellow)">
+      <div class="label">Last Polled</div>
+      <div class="value" id="statTime" style="font-size:0.9rem;padding-top:0.5rem">—</div>
+      <div class="sub">UTC timestamp</div>
+    </div>
+  </div>
+
+  <!-- Containers -->
+  <div class="section-title">Running Containers</div>
+  <div id="containersList" class="containers-list">
+    <div class="empty-state">Connect to your EC2 instance to see containers.</div>
+  </div>
+
+  <!-- API Log -->
+  <div class="section-title">API Request Log</div>
+  <div class="log-box">
+    <div class="log-header">
+      <span>Live Request History</span>
+      <button class="btn btn-outline" style="padding:0.25rem 0.6rem;font-size:0.65rem" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="logBody" class="log-body">
+      <div class="empty-state" style="padding:1rem">No requests yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let baseUrl = '';
+  let pollInterval = null;
+  const logs = [];
+
+  function getBase() {
+    const ip = document.getElementById('ipInput').value.trim();
+    const port = document.getElementById('portInput').value.trim() || '5000';
+    return `http://${ip}:${port}`;
+  }
+
+  function logRequest(method, endpoint, code) {
+    const now = new Date();
+    const time = now.toTimeString().slice(0,8);
+    logs.unshift({ time, method, endpoint, code });
+    if (logs.length > 30) logs.pop();
+    renderLog();
+  }
+
+  function renderLog() {
+    const el = document.getElementById('logBody');
+    if (logs.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:1rem">No requests yet.</div>';
+      return;
+    }
+    el.innerHTML = logs.map(l => `
+      <div class="log-entry">
+        <span class="time">${l.time}</span>
+        <span class="method">GET</span>
+        <span class="endpoint">${l.endpoint}</span>
+        <span class="${l.code < 400 ? 'code-ok' : 'code-err'}">${l.code}</span>
+      </div>
+    `).join('');
+  }
+
+  function clearLog() {
+    logs.length = 0;
+    renderLog();
+  }
+
+  async function fetchData(endpoint) {
+    const url = getBase() + endpoint;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      logRequest('GET', endpoint, res.status);
+      return { ok: res.ok, data: await res.json() };
+    } catch (e) {
+      logRequest('GET', endpoint, 0);
+      return { ok: false, data: null };
+    }
+  }
+
+  async function connect() {
+    document.getElementById('connectBtn').disabled = true;
+    document.getElementById('connectBtn').textContent = 'Connecting...';
+
+    const result = await fetchData('/info');
+
+    document.getElementById('connectBtn').disabled = false;
+    document.getElementById('connectBtn').textContent = 'Connect';
+
+    if (result.ok) {
+      setConnected(true);
+      if (pollInterval) clearInterval(pollInterval);
+      await refresh();
+      pollInterval = setInterval(refresh, 10000);
+    } else {
+      setConnected(false);
+      document.getElementById('statApi').textContent = 'ERROR';
+    }
+  }
+
+  function disconnect() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = null;
+    setConnected(false);
+    document.getElementById('statContainers').textContent = '—';
+    document.getElementById('statApi').textContent = 'OFFLINE';
+    document.getElementById('statTime').textContent = '—';
+    document.getElementById('containersList').innerHTML =
+      '<div class="empty-state">Connect to your EC2 instance to see containers.</div>';
+  }
+
+  function setConnected(val) {
+    const badge = document.getElementById('statusBadge');
+    const text = document.getElementById('statusText');
+    badge.className = `status-badge ${val ? 'connected' : 'disconnected'}`;
+    text.textContent = val ? 'Connected' : 'Disconnected';
+    document.getElementById('statApi').textContent = val ? 'ONLINE' : 'OFFLINE';
+    document.getElementById('statApi').style.color = val ? 'var(--green)' : 'var(--red)';
+  }
+
+  async function refresh() {
+    const infoResult = await fetchData('/info');
+    const contResult = await fetchData('/containers');
+
+    if (!infoResult.ok && !contResult.ok) {
+      setConnected(false);
+      return;
+    }
+
+    setConnected(true);
+    document.getElementById('statTime').textContent =
+      new Date().toISOString().slice(11,19) + ' UTC';
+
+    if (contResult.ok && contResult.data) {
+      const containers = contResult.data.containers || [];
+      document.getElementById('statContainers').textContent = containers.length;
+      renderContainers(containers);
+    }
+  }
+
+  const containerIcons = {
+    nginx: '🌐',
+    httpd: '🔧',
+    flask: '🐍',
+    ubuntu: '🐧',
+    default: '📦'
+  };
+
+  function renderContainers(containers) {
+    const el = document.getElementById('containersList');
+    if (!containers || containers.length === 0) {
+      el.innerHTML = '<div class="empty-state">No containers running. Start Docker containers on EC2.</div>';
+      return;
+    }
+    el.innerHTML = containers.map(c => {
+      const icon = containerIcons[c.image?.toLowerCase()] || containerIcons.default;
+      const isUp = (c.status || '').toLowerCase().includes('up');
+      return `
+        <div class="container-card">
+          <div class="container-icon">${icon}</div>
+          <div class="container-info">
+            <div class="name">${c.image}</div>
+            <div class="id">ID: ${c.id}</div>
+          </div>
+          <div class="container-status ${isUp ? 'running' : 'stopped'}">
+            <span>${isUp ? '●' : '○'}</span>
+            ${c.status || (isUp ? 'Running' : 'Stopped')}
+          </div>
+          <div class="container-ports">${c.ports || ''}</div>
+        </div>
+      `;
+    }).join('');
+  }
+</script>
+</body>
+</html>

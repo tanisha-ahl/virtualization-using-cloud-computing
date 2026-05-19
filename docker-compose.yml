@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  flask-api:
+    build: .
+    container_name: flask-virtualization-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  nginx-service:
+    image: nginx:latest
+    container_name: nginx-container
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
+  httpd-service:
+    image: httpd:latest
+    container_name: httpd-container
+    ports:
+      - "8082:80"
+    restart: unless-stopped
